@@ -39,16 +39,6 @@ To set up an OSRM routing machine for transit accessibility calculations:
    - Open a browser and navigate to `http://localhost:5000/`.
    - You should see an OSRM JSON response.
 
-## Population
-Accessibility computations incorporate population data to assess transit reachability. The methodology includes:
-
-- **Hexagonal Grid Analysis**: Population data is aggregated into hexagonal cells.
-- **Reachability Metrics**: Computes transit accessibility scores for each hexagon.
-- **GTFS Integration**: Uses GTFS data to determine transit service coverage.
-- **Multi-Hour Analysis**: Accessibility is computed for different time intervals.
-- **Precomputed Stop-to-Stop Matrices**: Uses A* algorithm for optimized routing.
-
-This approach enables evaluating accessibility for various demographic groups and urban planning scenarios.
 
 ## Accessibility Computation
 The project follows these key steps:
