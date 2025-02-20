@@ -48,9 +48,9 @@ The project follows these key steps:
 3. **Compute Walking Time**: Determines walking times from stops and points using OSRM.
 4. **Process POI Data**: Retrieves and processes POI locations from OpenStreetMap.
 5. **Calculate Accessibility Metrics**:
-   - **P2POI (Point-to-POI)**: Computes transit-based accessibility from grid points to POIs.
-   - **POI2P (POI-to-Point)**: Computes accessibility from POIs to grid points.
-   - **P2P (Point-to-Point)**: Evaluates direct transit-based connectivity.
+   - **P2POI (Point-to-POI[Time])**: Computes transit-based accessibility from grid points to POIs.
+   - **POI2P (POI-to-Point[Time])**: Computes accessibility from POIs to grid points.
+   - **P2P (Point-to-Point[Time])**: Evaluates direct transit-based connectivity.
 6. **Generate Interactive Map**: Visualizes accessibility results using Folium and Dash.
 
 For detailed execution, refer to `Accessibility_Calculation.ipynb` or run the scripts in sequence.
