@@ -6,10 +6,8 @@ To run this project, ensure you have the following dependencies installed:
 
 - **Python 3.8+**: Required for processing GTFS and accessibility computations.
 - **MongoDB**: Stores GTFS data and accessibility results.
-- **GeoPandas**: For spatial data processing.
 - **OSRM**: Used for routing and calculating travel times.
 - **Folium**: For visualization of accessibility data.
-- **Dash**: For interactive web-based accessibility dashboards.
 - **Numba**: Optimizes transit network calculations.
 - **Matplotlib**: Used for visualizations.
 - **NetworkX**: Handles transit graph processing.
