@@ -31,10 +31,10 @@ To set up an OSRM routing machine for transit accessibility calculations:
    Execute the following commands in your terminal:
 
    ```bash
-   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-extract -p /opt/foot.lua /data/Milano.osm.pbf
-   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-partition /data/Milano.osrm
-   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-customize /data/Milano.osrm
-   docker run -t -i -p 5000:5000 -v "$(pwd):/data" osrm/osrm-backend osrm-routed --algorithm mld /data/Milano.osrm
+   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-extract -p /opt/foot.lua /data/Torino.osm.pbf
+   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-partition /data/Torino.osrm
+   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-customize /data/Torino.osrm
+   docker run -t -i -p 5000:5000 -v "$(pwd):/data" osrm/osrm-backend osrm-routed --algorithm mld /data/Torino.osrm
    ```
 
 3. **Verify OSRM is Running**:
