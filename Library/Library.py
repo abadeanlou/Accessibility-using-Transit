@@ -296,6 +296,62 @@ def process_gtfs_data(db, gtfs_zip_path, specific_date=None):
         })
         logger.info(f"Number of edges removed: {edges_removed.deleted_count}")
 
+    def find_busiest_date(stop_times, trips, calendar, calendar_dates, logger):
+        """
+        Return the calendar date that would generate the most edges.
+        """
+        logger.info("Scanning all dates to find the busiest one…")
+    
+        # ―― Build the daily service table (same logic as preprocess_data) ――
+        calendar["start_date"] = pd.to_datetime(calendar["start_date"], format="%Y%m%d", errors="coerce")
+        calendar["end_date"]   = pd.to_datetime(calendar["end_date"],   format="%Y%m%d", errors="coerce")
+    
+        expanded = []
+        for _, row in calendar.iterrows():
+            if pd.isna(row["start_date"]) or pd.isna(row["end_date"]):
+                continue
+            d = row["start_date"]
+            while d <= row["end_date"]:
+                if row[d.strftime("%A").lower()]:
+                    expanded.append({"service_id": row["service_id"], "date": d})
+                d += pd.Timedelta(days=1)
+    
+        daily_service = pd.DataFrame(expanded, columns=["service_id", "date"])
+    
+        calendar_dates["date"] = pd.to_datetime(calendar_dates["date"], errors="coerce")
+        daily_service = pd.concat(
+            [daily_service, calendar_dates[calendar_dates["exception_type"] == 1][["service_id", "date"]]],
+            ignore_index=True
+        ).drop_duplicates()
+    
+        # Remove cancellations
+        removals = calendar_dates[calendar_dates["exception_type"] == 2][["service_id", "date"]]
+        if not removals.empty:
+            daily_service = daily_service.merge(
+                removals, on=["service_id", "date"], how="left", indicator=True
+            ).query('_merge == "left_only"').drop(columns="_merge")
+    
+        # ―― Attach trips to their operating days ――
+        trips_dates = trips.merge(daily_service, on="service_id", how="inner")
+    
+        # ―― Bring in stop_times only to COUNT potential edges ――
+        quick = stop_times.merge(
+            trips_dates[["trip_id", "date"]], on="trip_id", how="inner"
+        )
+    
+        #  edges for a trip‑date = rows – 1
+        quick["ones"] = 1
+        # rows per trip‑date
+        per_td = quick.groupby(["trip_id", "date"])["ones"].sum()           # rows
+        edges_per_td = per_td - 1                                           # rows – 1
+        # sum across trips -> edges per date
+        edges_per_date = edges_per_td.groupby("date").sum()
+    
+        busiest_date = edges_per_date.idxmax()
+        max_edges    = edges_per_date.max()
+    
+        logger.info(f"Busiest date is {busiest_date.date()} with {max_edges:,} edges.")
+        return busiest_date
 
     # Workflow execution
     stop_times = load_gtfs_stop_times(gtfs_zip_path)
@@ -303,18 +359,26 @@ def process_gtfs_data(db, gtfs_zip_path, specific_date=None):
     calendar = fetch_mongo_data("calendar", {"_id": 0})
     calendar_dates = fetch_mongo_data("calendar_dates", {"_id": 0, "date": 1, "service_id": 1, "exception_type": 1})
 
-    if specific_date:
-        logger.info(f"Processing data for date: {specific_date}")
+    if specific_date is None:
+        specific_date = find_busiest_date(
+            stop_times, trips, calendar, calendar_dates, logger
+        )
+    else:
         specific_date = pd.to_datetime(specific_date)
-        calendar_dates = calendar_dates[calendar_dates["date"] == specific_date]
+        logger.info(f"Processing only the supplied date: {specific_date.date()}")
 
-    edges = preprocess_data(stop_times, trips, calendar, calendar_dates, specific_date)
+    # Build edges for the chosen day
+    edges = preprocess_data(
+        stop_times, trips, calendar, calendar_dates, specific_date
+    )
+
+    # Insert to MongoDB in 20 000‑row batches
     save_edges_to_mongo(edges)
+
+    # Remove orphan stops and edges
     clean_stops_and_edges()
 
     logger.info("Edges have been stored on the database.")
-
-
 
 
 
@@ -1705,13 +1769,61 @@ def build_transit_graph(stop_id_to_index, stops, edges):
             transit_graph[s_idx].append((e_idx, float(edge["travel_time"]), float(edge["start_time"]), float(edge["end_time"])))
     return transit_graph, len(stop_id_to_index)
 
-def process_accessibility_to_pois(db, city, start_hours, max_travel_time=float('inf'),
-                                  transit_graph_dir="matrices", group_size=10):
-    stop_id_to_index, stops, edges, points, pois = load_data_from_mongodb(db, city, transit_graph_dir)
+# ──────────────────────────────────────────────────────────────────────────────
+#  Shared mini‑helper: pull data & build the transit graph once
+# ──────────────────────────────────────────────────────────────────────────────
+def _prepare_data(db, city, transit_graph_dir):
+    """
+    Returns
+    -------
+    stop_id_to_index : dict[str,int]
+    transit_graph    : numba.typed.Dict   (from build_transit_graph)
+    num_stops        : int
+    points           : list[dict]         (origin documents)
+    pois             : list[dict]         (POI documents)
+    """
+    stop_id_to_index, stops, edges, points, pois = load_data_from_mongodb(
+        db, city, transit_graph_dir
+    )
     transit_graph, num_stops = build_transit_graph(stop_id_to_index, stops, edges)
+    return stop_id_to_index, transit_graph, num_stops, points, pois
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  1.  Fastest time to *any* POI
+# ──────────────────────────────────────────────────────────────────────────────
+def process_accessibility_time_to_pois(
+    db,
+    city,
+    start_hours,
+    max_travel_time=float("inf"),
+    transit_graph_dir="matrices",
+    group_size=10,
+):
+    """
+    Compute the quickest travel time (min) from each origin point to *any*
+    POI.  Writes one field per departure hour:
+
+        Accessibility_P2POI_<hour>   – minutes or "Not reachable".
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from pymongo import UpdateOne
+    from tqdm import tqdm
+    import numpy as np
+
+    # ------------------------------------------------------------------
+    # 1.  Prep data
+    # ------------------------------------------------------------------
+    (
+        stop_id_to_index,
+        transit_graph,
+        num_stops,
+        points,
+        pois,
+    ) = _prepare_data(db, city, transit_graph_dir)
     total_points = len(points)
 
-    # Build Python dictionaries from POIs.
+    # POI lookup structures
     poi_direct_walk = {
         str(p["_id"]): {str(rp["point_id"]): float(rp["walking_time"]) for rp in p.get("reachable_points", [])}
         for p in pois
@@ -1719,76 +1831,194 @@ def process_accessibility_to_pois(db, city, start_hours, max_travel_time=float('
     poi_reachable_stops = {
         str(p["_id"]): [
             (stop_id_to_index[rs["stop_id"]], float(rs["walking_time"]))
-            for rs in p.get("reachable_stops", []) if rs["stop_id"] in stop_id_to_index
+            for rs in p.get("reachable_stops", [])
+            if rs["stop_id"] in stop_id_to_index
         ]
         for p in pois
     }
-    # Precompute the reachable stops array (shared across groups).
-    reachable_stops_list = []
-    for poi_id, stops_list in poi_reachable_stops.items():
-        for s_idx, walk_time in stops_list:
-            reachable_stops_list.append((s_idx, walk_time))
-    reachable_stops_array = np.array(reachable_stops_list, dtype=np.float64)
+    reachable_stops_arr = np.array(
+        [(s, w) for lst in poi_reachable_stops.values() for s, w in lst], dtype=np.float64
+    )
 
-    all_bulk_updates = []
+    # ------------------------------------------------------------------
+    # 2.  Per‑group worker (only fastest time)
+    # ------------------------------------------------------------------
+    def _time_worker(group_pts, T0, fld):
+        init_heap = []  # (walk_t, stop_idx, abs_depart, src_idx)
+        n_src = len(group_pts)
+        for src_idx, doc in enumerate(group_pts):
+            for rs in doc.get("reachable_stops", []):
+                sid = rs["stop_id"]
+                if sid in stop_id_to_index:
+                    s_idx = stop_id_to_index[sid]
+                    w = float(rs["walking_time"])
+                    init_heap.append((w, s_idx, T0 + w, src_idx))
 
-    # --- Define a worker function for group-level processing ---
-    def process_group(group_points, T_depart, field_name, max_travel_time):
-        # Build the initial heap for multi-source Dijkstra.
-        initial_heap = List()
-        num_sources = len(group_points)
-        for src_idx, point_doc in enumerate(group_points):
-            for rs in point_doc.get("reachable_stops", []):
-                stop_id = rs["stop_id"]
-                if stop_id in stop_id_to_index:
-                    s_idx = stop_id_to_index[stop_id]
-                    initial_heap.append((float(rs["walking_time"]), s_idx, T_depart + float(rs["walking_time"]), src_idx))
-        if len(initial_heap) > 0:
-            dist_matrix = multi_source_dijkstra(transit_graph, initial_heap, num_stops, num_sources)
-        else:
-            dist_matrix = np.full((num_sources, num_stops), np.inf)
-        # Compute the direct walking time for each point.
-        direct_walk_array = np.full(num_sources, np.inf)
-        for i, point_doc in enumerate(group_points):
-            point_id_str = str(point_doc["_id"])
-            best_direct = np.inf
-            for poi_id, direct_dict in poi_direct_walk.items():
-                d = direct_dict.get(point_id_str, np.inf)
-                if d < best_direct:
-                    best_direct = d
-            direct_walk_array[i] = best_direct
-        # Use Numba's parallel function to compute best times.
-        best_times = compute_best_times(dist_matrix, direct_walk_array, reachable_stops_array)
-        group_updates = []
-        for src_idx, point_doc in enumerate(group_points):
-            point_id = point_doc["_id"]
-            best_time = best_times[src_idx]
-            value = "Not reachable" if best_time == np.inf or best_time > max_travel_time else best_time / 60.0
-            group_updates.append(UpdateOne({"_id": point_id}, {"$set": {field_name: value}}))
-        return group_updates
+        dist = (
+            multi_source_dijkstra(transit_graph, init_heap, num_stops, n_src)
+            if init_heap
+            else np.full((n_src, num_stops), np.inf)
+        )
 
-    # --- Process each departure hour ---
-    for hour in start_hours:
-        T_depart = hour * 3600.0
-        field_name = f"Accessibility_P2POI_{hour}"
-        # Use a ThreadPoolExecutor to process groups concurrently.
-        from concurrent.futures import ThreadPoolExecutor, as_completed
+        direct_arr = np.array(
+            [
+                min(
+                    (
+                        direct.get(str(doc["_id"]), np.inf)
+                        for direct in poi_direct_walk.values()
+                    ),
+                    default=np.inf,
+                )
+                for doc in group_pts
+            ]
+        )
+
+        best_times = compute_best_times(dist, direct_arr, reachable_stops_arr)
+
+        updates = []
+        for i, doc in enumerate(group_pts):
+            bt = best_times[i]
+            val = "Not reachable" if bt == np.inf or bt > max_travel_time else bt / 60.0
+            updates.append(UpdateOne({"_id": doc["_id"]}, {"$set": {fld: val}}))
+        return updates
+
+    # ------------------------------------------------------------------
+    # 3.  Loop over hours
+    # ------------------------------------------------------------------
+    bulk_ops = []
+    for hr in start_hours:
+        T_dep = hr * 3600.0
+        fld = f"Accessibility_P2POI_{hr}"
         futures = []
-        with ThreadPoolExecutor() as executor:
-            for group_start in range(0, total_points, group_size):
-                group_points = points[group_start:group_start+group_size]
-                future = executor.submit(process_group, group_points, T_depart, field_name, max_travel_time)
-                futures.append(future)
-            pbar = tqdm(total=len(futures), desc=f"Hour {hour} - Processing Groups", unit="group")
-            for future in as_completed(futures):
-                group_updates = future.result()
-                all_bulk_updates.extend(group_updates)
+        with ThreadPoolExecutor() as ex:
+            for s in range(0, total_points, group_size):
+                grp = points[s : s + group_size]
+                futures.append(ex.submit(_time_worker, grp, T_dep, fld))
+            pbar = tqdm(total=len(futures), desc=f"Hour {hr} (time)")
+            for fut in as_completed(futures):
+                bulk_ops.extend(fut.result())
                 pbar.update(1)
             pbar.close()
 
-    if all_bulk_updates:
-        db["points"].bulk_write(all_bulk_updates)
-    print("All done with accessibility computations.")
+    if bulk_ops:
+        db["points"].bulk_write(bulk_ops)
+    print("Finished writing fastest‑time accessibility fields.")
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+#  2.  Number of POIs reachable within `max_travel_time`
+# ──────────────────────────────────────────────────────────────────────────────
+def process_reachable_poi_counts(
+    db,
+    city,
+    start_hours,
+    max_travel_time,
+    transit_graph_dir="matrices",
+    group_size=10,
+    count_field_prefix="ReachablePOIs_",
+):
+    """
+    Compute *how many* POIs each point can reach within `max_travel_time`
+    seconds for each departure hour.  Writes one integer field per hour:
+
+        <count_field_prefix><hour>   (e.g. ReachablePOIs_8)
+    """
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+    from pymongo import UpdateOne
+    from tqdm import tqdm
+    import numpy as np
+
+    # ------------------------------------------------------------------
+    # 1.  Prep data
+    # ------------------------------------------------------------------
+    (
+        stop_id_to_index,
+        transit_graph,
+        num_stops,
+        points,
+        pois,
+    ) = _prepare_data(db, city, transit_graph_dir)
+    total_points = len(points)
+
+    poi_direct_walk = {
+        str(p["_id"]): {str(rp["point_id"]): float(rp["walking_time"]) for rp in p.get("reachable_points", [])}
+        for p in pois
+    }
+    poi_reachable_stops = {
+        str(p["_id"]): [
+            (stop_id_to_index[rs["stop_id"]], float(rs["walking_time"]))
+            for rs in p.get("reachable_stops", [])
+            if rs["stop_id"] in stop_id_to_index
+        ]
+        for p in pois
+    }
+
+    # Pre‑flatten once for Numba kernel
+    reachable_stops_arr = np.array(
+        [(s, w) for lst in poi_reachable_stops.values() for s, w in lst], dtype=np.float64
+    )
+
+    # ------------------------------------------------------------------
+    # 2.  Per‑group worker (only counts)
+    # ------------------------------------------------------------------
+    def _count_worker(group_pts, T0, fld):
+        init_heap = []
+        n_src = len(group_pts)
+        for src_idx, doc in enumerate(group_pts):
+            for rs in doc.get("reachable_stops", []):
+                sid = rs["stop_id"]
+                if sid in stop_id_to_index:
+                    s_idx = stop_id_to_index[sid]
+                    w = float(rs["walking_time"])
+                    init_heap.append((w, s_idx, T0 + w, src_idx))
+
+        dist = (
+            multi_source_dijkstra(transit_graph, init_heap, num_stops, n_src)
+            if init_heap
+            else np.full((n_src, num_stops), np.inf)
+        )
+
+        counts = np.zeros(n_src, dtype=np.int32)
+        for i, doc in enumerate(group_pts):
+            pt_id = str(doc["_id"])
+            cnt = 0
+            for poi_id, stop_list in poi_reachable_stops.items():
+                best = poi_direct_walk.get(poi_id, {}).get(pt_id, np.inf)
+                for s_idx, walk_poi in stop_list:
+                    t = dist[i, s_idx] + walk_poi
+                    if t < best:
+                        best = t
+                if best <= max_travel_time:
+                    cnt += 1
+            counts[i] = cnt
+
+        return [
+            UpdateOne({"_id": doc["_id"]}, {"$set": {fld: int(counts[idx])}})
+            for idx, doc in enumerate(group_pts)
+        ]
+
+    # ------------------------------------------------------------------
+    # 3.  Loop over hours
+    # ------------------------------------------------------------------
+    bulk_ops = []
+    for hr in start_hours:
+        T_dep = hr * 3600.0
+        fld = f"{count_field_prefix}{hr}"
+        futures = []
+        with ThreadPoolExecutor() as ex:
+            for s in range(0, total_points, group_size):
+                grp = points[s : s + group_size]
+                futures.append(ex.submit(_count_worker, grp, T_dep, fld))
+            pbar = tqdm(total=len(futures), desc=f"Hour {hr} (counts)")
+            for fut in as_completed(futures):
+                bulk_ops.extend(fut.result())
+                pbar.update(1)
+            pbar.close()
+
+    if bulk_ops:
+        db["points"].bulk_write(bulk_ops)
+    print("Finished writing reachable‑POI count fields.")
+
 
 
 
@@ -2103,3 +2333,192 @@ def visualize_multi_hour_accessibility(points_collection, poi_collection,
 
 ###############################################################################################################################################
 
+def visualize_multi_hour_accessibility_Num_POI(
+    points_collection,
+    poi_collection,
+    hours,
+    html_file,
+    thresholds,
+    layer_opacity: float = 0.7,
+    count_field_prefix: str = "ReachablePOIs_",
+):
+    """
+    Build an interactive Folium map where each layer (one per `hour`)
+    shows how many POIs each origin hexagon can reach within the pre‑set
+    max‑travel‑time.  The map also includes:
+
+      • a legend explaining the colour scale (bottom‑left)  
+      • collapsible POI markers  
+      • a bottom‑right table reporting the share of population that can
+        reach at least X POIs (for each threshold provided).
+
+    Parameters
+    ----------
+    points_collection : pymongo.collection.Collection
+    poi_collection    : pymongo.collection.Collection
+    hours             : list[int]   departure‑hour labels used in preprocessing
+    html_file         : str         output path for the HTML file
+    thresholds        : list[int]   POI‑count thresholds for the summary table
+    layer_opacity     : float       polygon fill opacity
+    count_field_prefix: str         DB field prefix (default “ReachablePOIs_”)
+    """
+    import folium
+    import numpy as np
+    import matplotlib.pyplot as plt
+    from matplotlib import colors as mcolors, ticker as mticker
+
+    # --------------------------------------------------------
+    # 1.  Collect all count values (across requested hours)
+    # --------------------------------------------------------
+    counts = []
+    for hr in hours:
+        fld = f"{count_field_prefix}{hr}"
+        for doc in points_collection.find({}, {fld: 1}):
+            v = doc.get(fld)
+            if isinstance(v, (int, float)) and v >= 0:
+                counts.append(int(v))
+    if not counts:
+        raise ValueError("No POI‑count data found in points_collection.")
+
+    # Build “pretty” integer class breaks (≤ 10 classes)
+    locator = mticker.MaxNLocator(integer=True, nbins=10)
+    breaks = [int(b) for b in locator.tick_values(min(counts), max(counts))]
+    if len(breaks) < 2:
+        breaks = [min(counts), max(counts)]
+    n_classes = len(breaks) - 1
+    cmap = plt.cm.get_cmap("viridis", n_classes)
+    class_cols = [mcolors.rgb2hex(cmap(i)[:3]) for i in range(cmap.N)]
+
+    def colour_for(v):
+        if not isinstance(v, (int, float)):
+            return "#999999"
+        for i in range(n_classes):
+            lo, hi = breaks[i], breaks[i + 1]
+            if (i < n_classes - 1 and lo <= v < hi) or (i == n_classes - 1 and lo <= v <= hi):
+                return class_cols[i]
+        return "#999999"
+
+    # --------------------------------------------------------
+    # 2.  Centre map (use POI bbox if present)
+    # --------------------------------------------------------
+    pois = list(poi_collection.find({}, {"geometry": 1}))
+    if pois:
+        lat = [p["geometry"]["coordinates"][1] for p in pois]
+        lon = [p["geometry"]["coordinates"][0] for p in pois]
+        center = [(min(lat) + max(lat)) / 2, (min(lon) + max(lon)) / 2]
+    else:
+        first_pt = points_collection.find_one({}, {"centroid": 1})
+        if not first_pt:
+            raise ValueError("No geometry found in points_collection.")
+        center = list(first_pt["centroid"]["coordinates"])[::-1]
+
+    m = folium.Map(location=center, zoom_start=12, tiles=None)
+    folium.TileLayer(
+        "https://tile.thunderforest.com/transport-dark/{z}/{x}/{y}.png?apikey=9594d1374f8440788cbeb2092dde1199",
+        name="Thunderforest Transport",
+        attr="Thunderforest",
+        overlay=False,
+    ).add_to(m)
+
+    # Pre‑fetch static geometry once
+    base_pts = list(points_collection.find({}, {"hexagon": 1, "population": 1}))
+
+    # --------------------------------------------------------
+    # 3.  One overlay layer per departure hour
+    # --------------------------------------------------------
+    for hr in hours:
+        fld = f"{count_field_prefix}{hr}"
+        docs_by_id = {str(d["_id"]): d for d in points_collection.find({}, {fld: 1, "population": 1})}
+        fg = folium.FeatureGroup(name=f"{hr}h", overlay=True, control=True)
+        for pt in base_pts:
+            doc = docs_by_id.get(str(pt["_id"]))
+            if not doc:
+                continue
+            count_val = doc.get(fld)
+            if count_val is None:
+                continue
+            poly = folium.Polygon(
+                [[lat, lon] for lon, lat in pt["hexagon"]["coordinates"][0]],
+                color=None,
+                fill=True,
+                fill_color=colour_for(count_val),
+                fill_opacity=layer_opacity,
+                popup=f"Reachable POIs ({hr}h): {count_val}<br>Population: {doc.get('population', 'N/A')}",
+            )
+            poly.add_to(fg)
+        fg.add_to(m)
+
+    # --------------------------------------------------------
+    # 4.  POI markers layer (collapsed by default)
+    # --------------------------------------------------------
+    poi_fg = folium.FeatureGroup(name="POIs", overlay=True, show=False)
+    for p in pois:
+        lon, lat = p["geometry"]["coordinates"]
+        folium.Marker([lat, lon], icon=folium.Icon(color="red", icon="info-sign"), popup="POI").add_to(poi_fg)
+    poi_fg.add_to(m)
+
+    # --------------------------------------------------------
+    # 5.  Legend (bottom‑left)
+    # --------------------------------------------------------
+    legend_html = (
+        "<div style='position:fixed;bottom:50px;left:50px;width:260px;background:#fff;"
+        "border:2px solid grey;border-radius:10px;padding:10px;z-index:1000;font-size:14px;'>"
+        "<h4 style='margin:0 0 8px 0;'># of POIs reachable</h4>"
+    )
+    for i, col in enumerate(class_cols):
+        rng = (
+            f"{breaks[i]} – {breaks[i + 1] - 1}"
+            if i < n_classes - 1
+            else f"≥ {breaks[i]}"
+        )
+        legend_html += (
+            "<div style='display:flex;align-items:center;margin-bottom:4px;'>"
+            f"<div style='width:20px;height:20px;background:{col};border:1px solid black;margin-right:8px;'></div>"
+            f"<span>{rng}</span></div>"
+        )
+    legend_html += "</div>"
+    m.get_root().html.add_child(folium.Element(legend_html))
+
+    # Layer control
+    folium.LayerControl().add_to(m)
+
+    # --------------------------------------------------------
+    # 6.  Population summary table (bottom‑right)
+    # --------------------------------------------------------
+    def share_reaching(th):
+        total_pop = good_pop = 0
+        fields = {"population": 1, **{f"{count_field_prefix}{h}": 1 for h in hours}}
+        for doc in points_collection.find({}, fields):
+            pop = doc.get("population", 0)
+            if not isinstance(pop, (int, float)) or pop <= 0:
+                continue
+            total_pop += pop
+            if any(doc.get(f"{count_field_prefix}{h}", 0) >= th for h in hours):
+                good_pop += pop
+        return 0 if total_pop == 0 else 100 * good_pop / total_pop
+
+    row_cells = "".join(
+        f"<td style='border:1px solid #ddd;text-align:center;'>{int(share_reaching(th))}%</td>"
+        for th in thresholds
+    )
+    header_cells = "".join(
+        f"<th style='border:1px solid #ddd;text-align:center;'>{th}+</th>" for th in thresholds
+    )
+    table_html = (
+        "<div style='position:fixed;bottom:50px;right:50px;width:240px;background:#f8f9fa;"
+        "border:2px solid #ccc;border-radius:10px;padding:10px;z-index:1000;font-size:14px;"
+        "box-shadow:2px 2px 8px rgba(0,0,0,0.3);'>"
+        "<h4 style='margin:0 0 8px 0;text-align:center;background:#343a40;color:#fff;"
+        "padding:6px;border-radius:5px;'>Population reaching ≥ X POIs (any hour)</h4>"
+        "<table style='width:100%;border-collapse:collapse;font-family:Arial,sans-serif;'>"
+        f"<tr><th style='border:1px solid #ddd;text-align:center;'>POIs</th>{header_cells}</tr>"
+        f"<tr><td style='border:1px solid #ddd;text-align:center;'>Share</td>{row_cells}</tr>"
+        "</table></div>"
+    )
+    m.get_root().html.add_child(folium.Element(table_html))
+
+    # --------------------------------------------------------
+    # 7.  Save map
+    # --------------------------------------------------------
+    m.save(html_file)
+    print(f"Accessibility map saved to {html_file} with population stats at the bottom-right.")
