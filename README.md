@@ -1,60 +1,55 @@
 # Accessibility-using-Transit
-Computing Accessibility Using Transit
 
-## Requirements
-To run this project, ensure you have the following dependencies installed:
+[![tests](https://github.com/abadeanlou/Accessibility-using-Transit/actions/workflows/ci.yml/badge.svg)](https://github.com/abadeanlou/Accessibility-using-Transit/actions/workflows/ci.yml)
 
-- **Python 3.8+**: Required for processing GTFS and accessibility computations.
-- **MongoDB**: Stores GTFS data and accessibility results.
-- **OSRM**: Used for routing and calculating travel times.
-- **Folium**: For visualization of accessibility data.
-- **Numba**: Optimizes transit network calculations.
-- **Matplotlib**: Used for visualizations.
-- **NetworkX**: Handles transit graph processing.
-- **OSMnx**: Retrieves OpenStreetMap data.
+Compute public-transport **accessibility** and **equity** for any city from
+open GTFS data - a modern, self-contained successor to my M.Sc. thesis work
+([public-transport-analysis](https://github.com/abadeanlou/public-transport-analysis),
+built on the POLITO/CityChrone codebase), implementing the methodology of my
+first-author papers:
 
-Install required Python packages using:
+- *Assessing Transportation Accessibility Equity via Open Data* - hEART 2022
+  ([arXiv:2206.09037](https://arxiv.org/abs/2206.09037))
+- *Equity Scores for Public Transit Lines from Open Data and Accessibility
+  Measures* - TRB 2023 ([arXiv:2210.00128](https://arxiv.org/abs/2210.00128))
 
-```bash
-pip install -r requirements.txt
+**Live demo: <https://abadeanlou.com/accessibility/>** - interactive
+accessibility maps of Torino produced by this pipeline.
+
+## Pipeline
+
+```
+GTFS zip --> MongoDB (stops, trips, calendars)
+         --> stop-to-stop edge list for the busiest service day
+         --> hexagonal grid over the area of interest
+         --> travel times (transit graph + OSRM walking legs)
+         --> accessibility per hex cell:  P2P / P2POI / POI2P
+         --> equity metrics (Library/equity.py): population-weighted
+             Lorenz curves + Gini indices
+         --> interactive Folium maps (Maps/)
 ```
 
-## OSRM Machine
-To set up an OSRM routing machine for transit accessibility calculations:
+- `Accessibility_Calculation.ipynb` - end-to-end driver notebook (Torino
+  example; swap the GTFS zip and boundary to run any city).
+- `Library/` - the actual implementation (~3,700 lines): GTFS processing,
+  grid construction, routing, accessibility kernels (Numba-optimised), and
+  the equity module.
+- `Maps/` - self-contained interactive outputs.
 
-1. **Download OSM Data**:
-   - Obtain an `.osm.pbf` file for your region from [Geofabrik](https://download.geofabrik.de/).
+## Equity metrics
 
-2. **Run OSRM in Docker**:
-   Execute the following commands in your terminal:
+Accessibility is distributed over *people*, not places. `Library/equity.py`
+weights each cell's accessibility by its population and computes Lorenz
+curves and Gini indices - the same lens the papers use to compare how fairly
+transit serves a city. Pure NumPy, unit-tested standalone:
 
-   ```bash
-   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-extract -p /opt/foot.lua /data/Torino.osm.pbf
-   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-partition /data/Torino.osrm
-   docker run -t -v "$(pwd):/data" osrm/osrm-backend osrm-customize /data/Torino.osrm
-   docker run -t -i -p 5000:5000 -v "$(pwd):/data" osrm/osrm-backend osrm-routed --algorithm mld /data/Torino.osrm
-   ```
+```bash
+pip install numpy pytest
+pytest tests -v
+```
 
-3. **Verify OSRM is Running**:
-   - Open a browser and navigate to `http://localhost:5000/`.
-   - You should see an OSRM JSON response.
+## Requirements (full pipeline)
 
-
-## Accessibility Computation
-The project follows these key steps:
-
-1. **Extract Data from GTFS**: Loads and stores GTFS data in MongoDB.
-2. **Create Hexagonal Grid**: Generates a spatially indexed hexagonal grid.
-3. **Compute Walking Time**: Determines walking times from stops and points using OSRM.
-4. **Process POI Data**: Retrieves and processes POI locations from OpenStreetMap.
-5. **Calculate Accessibility Metrics**:
-   - **P2POI (Point-to-POI[Time])**: Computes transit-based accessibility from grid points to POIs.
-   - **POI2P (POI-to-Point[Time])**: Computes accessibility from POIs to grid points.
-   - **P2P (Point-to-Point[Time])**: Evaluates direct transit-based connectivity.
-6. **Generate Interactive Map**: Visualizes accessibility results using Folium and Dash.
-
-For detailed execution, refer to `Accessibility_Calculation.ipynb` or run the scripts in sequence.
-
----
-
-For any questions or contributions, feel free to open an issue or a pull request. 🚀
+Python 3.8+, MongoDB, OSRM (see `osrm/` for the Docker setup), plus
+`pip install -r requirements.txt`. The full pipeline needs a running
+MongoDB and OSRM instance; the equity module and its tests do not.
