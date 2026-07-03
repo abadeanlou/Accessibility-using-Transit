@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transit accessibility maps — Torino</title>
+  <title>Transit accessibility maps — seven European cities</title>
   <style>
     :root { --bg:#faf8f5; --card:#fff; --ink:#2b2b2b; --muted:#6b6b6b;
             --accent:#8a6d3b; --border:#e8e2d9; }
@@ -13,49 +13,102 @@
     * { margin:0; padding:0; box-sizing:border-box; }
     body { font-family: Georgia, serif; background:var(--bg); color:var(--ink);
            line-height:1.65; }
-    .wrap { max-width: 760px; margin:0 auto; padding:3rem 1.5rem; }
+    .wrap { max-width: 860px; margin:0 auto; padding:3rem 1.5rem; }
     .kicker { font-family: Verdana, sans-serif; font-size:.72rem; letter-spacing:.14em;
               text-transform:uppercase; color:var(--accent); margin-bottom:.4rem; }
     h1 { font-weight:normal; font-size:1.9rem; margin-bottom:1rem; }
+    h2 { font-family: Verdana, sans-serif; font-size:.8rem; font-weight:normal;
+         letter-spacing:.18em; text-transform:uppercase; color:var(--accent);
+         border-bottom:1px solid var(--border); padding-bottom:.4rem;
+         margin:2.2rem 0 .9rem; }
     p { margin-bottom:1rem; }
+    .maps { display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:.8rem; }
     .card { display:block; background:var(--card); border:1px solid var(--border);
-            border-radius:4px; padding:1.1rem 1.3rem; margin:1rem 0;
-            text-decoration:none; color:var(--ink); }
+            border-radius:4px; padding: .8rem 1rem; text-decoration:none; color:var(--ink); }
     .card:hover { border-color: var(--accent); }
-    .card small { font-family: Verdana, sans-serif; color:var(--muted); font-size:.75rem; }
+    .card small { font-family: Verdana, sans-serif; color:var(--muted); font-size:.72rem; }
     a { color: var(--accent); }
+    .legend { font-family: Verdana, sans-serif; font-size:.78rem; color:var(--muted);
+              background:var(--card); border:1px solid var(--border); border-radius:4px;
+              padding: .9rem 1.1rem; margin: 1.2rem 0; }
+    .legend b { color: var(--ink); font-weight:600; }
     footer { margin-top:2.5rem; border-top:1px solid var(--border); padding-top:1rem;
              font-size:.9rem; color:var(--muted); }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <p class="kicker">transit accessibility · research demo</p>
-    <h1>How far can Torino take you?</h1>
-    <p>Interactive maps of public-transport accessibility for Torino, computed
-    from open GTFS schedules: the transit network is rebuilt in MongoDB, travel
-    times are routed over a hexagonal grid, and each cell is colored by how much
-    of the city it can reach. Methodology from my first-author papers at
+    <p class="kicker">transit accessibility · research demos</p>
+    <h1>How far can a city take you?</h1>
+    <p>Interactive maps of public-transport accessibility for seven European
+    cities, computed from open GTFS schedules: each city's transit network is
+    rebuilt from its timetables, travel times are routed over a hexagonal grid
+    (with OSRM walking legs), and every cell is colored by how well transit
+    serves it. Methodology from my first-author papers at
     <a href="https://arxiv.org/abs/2206.09037">hEART 2022</a> and
     <a href="https://arxiv.org/abs/2210.00128">TRB 2023</a>.</p>
 
-    <a class="card" href="accessibility_map_Torino_P2P.html">
-      <strong>Point → Point</strong><br>
-      <small>Reachability between all zones of the city — the general accessibility surface (9 MB)</small>
-    </a>
-    <a class="card" href="accessibility_map_Torino_P2POI.html">
-      <strong>Point → Points of Interest</strong><br>
-      <small>How easily each neighbourhood reaches services and amenities (6 MB)</small>
-    </a>
-    <a class="card" href="accessibility_map_Torino_POI2P.html">
-      <strong>Points of Interest → Point</strong><br>
-      <small>The catchment view: who can reach each amenity (7 MB)</small>
-    </a>
+    <div class="legend">
+      <b>Map types</b> —
+      <b>P2P</b>: average travel time from each cell to the whole city ·
+      <b>P2POI</b>: travel time to points of interest ·
+      <b>POI2P</b>: the catchment view — who can reach each amenity ·
+      <b>Reachable POIs</b>: how many amenities are reachable within time thresholds ·
+      <b>Reachable population</b>: how many people each cell can reach.
+      Maps are self-contained exports of several MB — give them a few seconds.
+    </div>
+
+    <h2>Torino</h2>
+    <div class="maps">
+      <a class="card" href="accessibility_map_Torino_P2P.html"><strong>P2P</strong><br><small>city-wide travel time (9 MB)</small></a>
+      <a class="card" href="accessibility_map_Torino_P2POI.html"><strong>P2POI</strong><br><small>time to amenities (6 MB)</small></a>
+      <a class="card" href="accessibility_map_Torino_POI2P.html"><strong>POI2P</strong><br><small>amenity catchments (7 MB)</small></a>
+    </div>
+
+    <h2>Milano</h2>
+    <div class="maps">
+      <a class="card" href="accessibility_map_Milano_P2P.html"><strong>P2P</strong><br><small>city-wide travel time (12 MB)</small></a>
+      <a class="card" href="accessibility_map_Milano_P2POI.html"><strong>P2POI</strong><br><small>time to amenities (16 MB)</small></a>
+      <a class="card" href="accessibility_map_Milano_POI2P.html"><strong>POI2P</strong><br><small>amenity catchments (9 MB)</small></a>
+      <a class="card" href="accessibility_map_Milano_P2NumPOI_8.html"><strong>Reachable POIs</strong><br><small>amenities within reach, 8:00 (16 MB)</small></a>
+    </div>
+
+    <h2>Paris</h2>
+    <div class="maps">
+      <a class="card" href="accessibility_map_Paris_P2P.html"><strong>P2P</strong><br><small>city-wide travel time (55 MB — heavy)</small></a>
+      <a class="card" href="accessibility_map_Paris_P2POI.html"><strong>P2POI</strong><br><small>time to amenities (34 MB)</small></a>
+      <a class="card" href="accessibility_map_Paris_POI2P.html"><strong>POI2P</strong><br><small>amenity catchments (35 MB)</small></a>
+    </div>
+
+    <h2>Amsterdam</h2>
+    <div class="maps">
+      <a class="card" href="accessibility_map_Amsterdam_P2NumPOI.html"><strong>Reachable POIs</strong><br><small>amenities within reach (10 MB)</small></a>
+      <a class="card" href="accessibility_map_Amsterdam_ReachablePopulation.html"><strong>Reachable population</strong><br><small>people within reach (5 MB)</small></a>
+    </div>
+
+    <h2>Vienna</h2>
+    <div class="maps">
+      <a class="card" href="accessibility_map_Vienna_P2NumPOI.html"><strong>Reachable POIs</strong><br><small>amenities within reach (8 MB)</small></a>
+      <a class="card" href="accessibility_map_Vienna_ReachablePopulation.html"><strong>Reachable population</strong><br><small>people within reach (3 MB)</small></a>
+    </div>
+
+    <h2>Helsinki</h2>
+    <div class="maps">
+      <a class="card" href="accessibility_map_Helsinki_P2NumPOI.html"><strong>Reachable POIs</strong><br><small>amenities within reach (7 MB)</small></a>
+      <a class="card" href="accessibility_map_Helsinki_ReachablePopulation.html"><strong>Reachable population</strong><br><small>people within reach (4 MB)</small></a>
+    </div>
+
+    <h2>Budapest</h2>
+    <div class="maps">
+      <a class="card" href="accessibility_map_Budapest_P2NumPOI.html"><strong>Reachable POIs</strong><br><small>amenities within reach (8 MB)</small></a>
+      <a class="card" href="accessibility_map_Budapest_ReachablePopulation.html"><strong>Reachable population</strong><br><small>people within reach (4 MB)</small></a>
+    </div>
 
     <footer>
       <p>Code: <a href="https://github.com/abadeanlou/Accessibility-using-Transit">Accessibility-using-Transit</a>
       · Built by <a href="https://abadeanlou.com/">Amirhesam Badeanlou</a>
-      · Maps are self-contained Folium exports and may take a few seconds to load.</p>
+      · The Torino maps live in the repository; the other cities' maps are
+      hosted server-side (they are large research exports).</p>
     </footer>
   </div>
 </body>
