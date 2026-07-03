@@ -40,7 +40,10 @@ GTFS zip --> MongoDB (stops, trips, calendars)
 
 Accessibility is distributed over *people*, not places. `Library/equity.py`
 weights each cell's accessibility by its population and computes Lorenz
-curves and Gini indices - the same lens the papers use to compare how fairly
+curves plus the standard inequality-index family - **Gini**, **Theil**
+(decomposable by district), **Atkinson** (explicit inequality-aversion
+parameter), and the **Palma ratio** (top-10% vs bottom-40% share) - the
+same lens the papers use to compare how fairly
 transit serves a city. Pure NumPy, unit-tested standalone:
 
 ```bash

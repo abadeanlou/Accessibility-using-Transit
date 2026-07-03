@@ -85,7 +85,75 @@ def equity_summary(accessibility, population) -> dict:
     bottom_half_share = float(va[: half + 1].sum() / va.sum()) if va.sum() else 0.0
     return {
         "gini": round(g, 4),
+        "theil": round(theil(v, w), 4),
+        "atkinson_e05": round(atkinson(v, w, epsilon=0.5), 4),
+        "palma_ratio": round(palma_ratio(v, w), 4),
         "population": float(w.sum()),
         "mean_accessibility_per_capita": round(float((v * w).sum() / w.sum()), 4),
         "bottom_half_accessibility_share": round(bottom_half_share, 4),
     }
+
+
+def theil(values, weights=None) -> float:
+    """Population-weighted Theil T index.
+
+    0 = perfect equality; unbounded above. Decomposable: the Theil index of
+    a city equals within-district plus between-district inequality, which
+    makes it the tool of choice for asking WHERE inequality lives.
+    Zero-accessibility observations contribute 0 (the x·ln x limit).
+    """
+    v, w = _validate(values, weights)
+    mu = float((v * w).sum() / w.sum())
+    if mu == 0:
+        return 0.0
+    share = w / w.sum()
+    r = v / mu
+    pos = r > 0
+    return float((share[pos] * r[pos] * np.log(r[pos])).sum())
+
+
+def atkinson(values, weights=None, epsilon: float = 0.5) -> float:
+    """Population-weighted Atkinson index with inequality aversion epsilon.
+
+    0 = perfect equality, 1 = maximal inequality. Larger epsilon weights
+    the low-accessibility end more heavily; with epsilon >= 1 any person
+    with zero accessibility drives the index to 1 (by design).
+    """
+    if epsilon <= 0:
+        raise ValueError("epsilon must be > 0")
+    v, w = _validate(values, weights)
+    mu = float((v * w).sum() / w.sum())
+    if mu == 0:
+        return 0.0
+    share = w / w.sum()
+    if epsilon == 1.0:
+        if (v == 0).any():
+            return 1.0
+        geo = float(np.exp((share * np.log(v / mu)).sum()))
+        return 1.0 - geo
+    ede = float((share * (v / mu) ** (1.0 - epsilon)).sum()) ** (1.0 / (1.0 - epsilon))
+    return 1.0 - ede
+
+
+def palma_ratio(values, weights=None) -> float:
+    """Palma ratio: accessibility share of the best-served 10% of people
+    divided by the share of the worst-served 40%.
+
+    1 would mean the top decile holds exactly 2.5x ... — for reference,
+    perfect equality gives 0.25 (10% of people hold 10%, 40% hold 40%).
+    People are assigned to deciles by cumulative population weight ordered
+    by accessibility; boundary cells are not interpolated.
+    """
+    v, w = _validate(values, weights)
+    order = np.argsort(v)
+    v, w = v[order], w[order]
+    cum = np.cumsum(w) / w.sum()
+    va = v * w
+    total = va.sum()
+    if total == 0:
+        return 0.0
+    bottom = float(va[cum <= 0.4].sum() / total)
+    top = float(va[cum > 0.9].sum() / total)
+    if bottom == 0:
+        return float("inf")
+    return top / bottom
