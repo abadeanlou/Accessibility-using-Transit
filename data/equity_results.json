@@ -1,0 +1,78 @@
+{
+  "hour": 8,
+  "accessibility_definition": "1 / max(average_travel_time_min, 1.0)",
+  "results": {
+    "Torino_P2P": {
+      "city": "Torino",
+      "map_type": "P2P",
+      "n_cells": 2184,
+      "gini": 0.0875,
+      "theil": 0.0123,
+      "atkinson_e05": 0.0063,
+      "palma_ratio": 0.3644,
+      "population": 1526156.0,
+      "mean_accessibility_per_capita": 0.0126,
+      "bottom_half_accessibility_share": 0.4374
+    },
+    "Milano_P2P": {
+      "city": "Milano",
+      "map_type": "P2P",
+      "n_cells": 2804,
+      "gini": 0.1066,
+      "theil": 0.0185,
+      "atkinson_e05": 0.0095,
+      "palma_ratio": 0.3994,
+      "population": 2544137.0,
+      "mean_accessibility_per_capita": 0.014,
+      "bottom_half_accessibility_share": 0.424
+    },
+    "Paris_P2P": {
+      "city": "Paris",
+      "map_type": "P2P",
+      "n_cells": 13134,
+      "gini": 0.0807,
+      "theil": 0.0099,
+      "atkinson_e05": 0.005,
+      "palma_ratio": 0.3613,
+      "population": 10849498.0,
+      "mean_accessibility_per_capita": 0.0121,
+      "bottom_half_accessibility_share": 0.4422
+    },
+    "Torino_P2POI": {
+      "city": "Torino",
+      "map_type": "P2POI",
+      "n_cells": 1908,
+      "gini": 0.3441,
+      "theil": 0.2143,
+      "atkinson_e05": 0.0965,
+      "palma_ratio": 1.4362,
+      "population": 1454681.0,
+      "mean_accessibility_per_capita": 0.0352,
+      "bottom_half_accessibility_share": 0.2726
+    },
+    "Milano_P2POI": {
+      "city": "Milano",
+      "map_type": "P2POI",
+      "n_cells": 4764,
+      "gini": 0.4138,
+      "theil": 0.2754,
+      "atkinson_e05": 0.1379,
+      "palma_ratio": 1.7751,
+      "population": 3333135.0,
+      "mean_accessibility_per_capita": 0.417,
+      "bottom_half_accessibility_share": 0.1969
+    },
+    "Paris_P2POI": {
+      "city": "Paris",
+      "map_type": "P2POI",
+      "n_cells": 12804,
+      "gini": 0.2337,
+      "theil": 0.0879,
+      "atkinson_e05": 0.0424,
+      "palma_ratio": 0.7713,
+      "population": 10795836.0,
+      "mean_accessibility_per_capita": 0.0233,
+      "bottom_half_accessibility_share": 0.3353
+    }
+  }
+}
