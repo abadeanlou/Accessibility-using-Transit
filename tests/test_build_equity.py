@@ -11,18 +11,26 @@ import build_equity  # noqa: E402
 def _write_csvs(data_dir: Path) -> None:
     data_dir.mkdir()
     for city in build_equity.CITIES:
-        for map_type in build_equity.MAP_TYPES:
-            rows = [
-                "lat,lon,hour,travel_time_min,population",
-                "45.0,7.0,3,99.0,50",          # other hour: must be ignored
-                "45.0,7.0,8,10.0,100",
-                "45.1,7.1,8,0.0,10",           # zero time: floored to 1 min
-                "45.2,7.2,8,40.0,200",
-                "45.3,7.3,8,,30",              # not reachable: accessibility 0
-            ]
-            (data_dir / f"hexes_{city}_{map_type}.csv").write_text(
-                "\n".join(rows) + "\n", encoding="utf-8"
-            )
+        rows = [
+            "lat,lon,hour,travel_time_min,population",
+            "45.0,7.0,3,99.0,50",          # other hour: must be ignored
+            "45.0,7.0,8,10.0,100",
+            "45.1,7.1,8,0.0,10",           # zero time: floored to 1 min
+            "45.2,7.2,8,40.0,200",
+            "45.3,7.3,8,,30",              # not reachable: accessibility 0
+        ]
+        (data_dir / f"hexes_{city}_P2P.csv").write_text(
+            "\n".join(rows) + "\n", encoding="utf-8"
+        )
+        counts = [
+            "lat,lon,population,reachable_pois",
+            "45.0,7.0,100,120",
+            "45.1,7.1,10,0",               # zero-count hex stays in
+            "45.2,7.2,200,45",
+        ]
+        (data_dir / f"numpoi_{city}.csv").write_text(
+            "\n".join(counts) + "\n", encoding="utf-8"
+        )
 
 
 def test_compute_all_and_render(tmp_path):
@@ -35,6 +43,10 @@ def test_compute_all_and_render(tmp_path):
     assert 0 < r["gini"] < 1
     assert r["lorenz"][0] == [0.0, 0.0]
     assert r["lorenz"][-1] == [1.0, 1.0]
+
+    a = results["Torino_AMENITIES"]
+    assert a["n_cells"] == 3
+    assert 0 < a["gini"] < 1
 
     section = build_equity.render_section(results)
     assert '<h2 id="equity">' in section
