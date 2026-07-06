@@ -1,0 +1,25 @@
+{
+  "popup_labels": [
+    "Accessibility to POI (22h)",
+    "Accessibility to POI (3h)",
+    "Accessibility to POI (8h)"
+  ],
+  "hours": [
+    3,
+    8,
+    22
+  ],
+  "n_cells_per_hour": {
+    "3": 13134,
+    "8": 13134,
+    "22": 13134
+  },
+  "n_cells": 39402,
+  "n_not_reachable": 0,
+  "total_population_per_hour": {
+    "3": 10849498.0,
+    "8": 10849498.0,
+    "22": 10849498.0
+  },
+  "source": "map_Paris_P2P.html"
+}

@@ -483,7 +483,7 @@ def visualize_multi_hour_accessibility(points_collection, poi_collection,
             population = doc_for_hour.get("population", "N/A")
             color, popup_val = get_color_and_popup(accessibility_value, class_intervals, class_colors)
             popup_text = f"""
-                Accessibility to POI ({hour}h): {popup_val} <br>
+                Accessibility P2P ({hour}h): {popup_val} <br>
                 Population: {population}
             """
             polygon = folium.Polygon(

@@ -1,0 +1,25 @@
+{
+  "popup_labels": [
+    "Accessibility to POI (22h)",
+    "Accessibility to POI (3h)",
+    "Accessibility to POI (8h)"
+  ],
+  "hours": [
+    3,
+    8,
+    22
+  ],
+  "n_cells_per_hour": {
+    "3": 2804,
+    "8": 2804,
+    "22": 2804
+  },
+  "n_cells": 8412,
+  "n_not_reachable": 0,
+  "total_population_per_hour": {
+    "3": 2544137.0,
+    "8": 2544137.0,
+    "22": 2544137.0
+  },
+  "source": "map_Milano_P2P.html"
+}
