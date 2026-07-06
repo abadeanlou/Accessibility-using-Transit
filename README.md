@@ -14,10 +14,9 @@ first-author papers:
   Measures* - TRB 2023 ([arXiv:2210.00128](https://arxiv.org/abs/2210.00128))
 
 **Live demo: <https://abadeanlou.com/accessibility/>** - interactive
-accessibility maps for seven European cities (Torino, Milano, Paris,
-Amsterdam, Vienna, Helsinki, Budapest) produced by this pipeline. The
-Torino maps live in this repository; the other cities' exports are large
-and are hosted server-side.
+accessibility maps for Torino, Milano, and Paris produced by this
+pipeline. The Torino maps live in this repository; the other cities'
+exports are large and are hosted server-side.
 
 ## Pipeline
 

@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Transit accessibility maps — seven European cities</title>
+  <title>Transit accessibility maps — Torino, Milano, Paris</title>
   <style>
     :root { --bg:#faf8f5; --card:#fff; --ink:#2b2b2b; --muted:#6b6b6b;
             --accent:#8a6d3b; --border:#e8e2d9; }
@@ -40,8 +40,8 @@
   <div class="wrap">
     <p class="kicker">transit accessibility · research demos</p>
     <h1>How far can a city take you?</h1>
-    <p>Interactive maps of public-transport accessibility for seven European
-    cities, computed from open GTFS schedules: each city's transit network is
+    <p>Interactive maps of public-transport accessibility for three European
+    cities — Torino, Milano, and Paris — computed from open GTFS schedules: each city's transit network is
     rebuilt from its timetables, travel times are routed over a hexagonal grid
     (with OSRM walking legs), and every cell is colored by how well transit
     serves it. Methodology from my first-author papers at
@@ -53,8 +53,7 @@
       <b>P2P</b>: average travel time from each cell to the whole city ·
       <b>P2POI</b>: travel time to points of interest ·
       <b>POI2P</b>: the catchment view — who can reach each amenity ·
-      <b>Reachable POIs</b>: how many amenities are reachable within time thresholds ·
-      <b>Reachable population</b>: how many people each cell can reach.
+      <b>Reachable POIs</b>: how many amenities are reachable within time thresholds.
       Maps are self-contained exports of several MB — give them a few seconds.
     </div>
 
@@ -78,30 +77,6 @@
       <a class="card" href="accessibility_map_Paris_P2P.html"><strong>P2P</strong><br><small>city-wide travel time (55 MB — heavy)</small></a>
       <a class="card" href="accessibility_map_Paris_P2POI.html"><strong>P2POI</strong><br><small>time to amenities (34 MB)</small></a>
       <a class="card" href="accessibility_map_Paris_POI2P.html"><strong>POI2P</strong><br><small>amenity catchments (35 MB)</small></a>
-    </div>
-
-    <h2>Amsterdam</h2>
-    <div class="maps">
-      <a class="card" href="accessibility_map_Amsterdam_P2NumPOI.html"><strong>Reachable POIs</strong><br><small>amenities within reach (10 MB)</small></a>
-      <a class="card" href="accessibility_map_Amsterdam_ReachablePopulation.html"><strong>Reachable population</strong><br><small>people within reach (5 MB)</small></a>
-    </div>
-
-    <h2>Vienna</h2>
-    <div class="maps">
-      <a class="card" href="accessibility_map_Vienna_P2NumPOI.html"><strong>Reachable POIs</strong><br><small>amenities within reach (8 MB)</small></a>
-      <a class="card" href="accessibility_map_Vienna_ReachablePopulation.html"><strong>Reachable population</strong><br><small>people within reach (3 MB)</small></a>
-    </div>
-
-    <h2>Helsinki</h2>
-    <div class="maps">
-      <a class="card" href="accessibility_map_Helsinki_P2NumPOI.html"><strong>Reachable POIs</strong><br><small>amenities within reach (7 MB)</small></a>
-      <a class="card" href="accessibility_map_Helsinki_ReachablePopulation.html"><strong>Reachable population</strong><br><small>people within reach (4 MB)</small></a>
-    </div>
-
-    <h2>Budapest</h2>
-    <div class="maps">
-      <a class="card" href="accessibility_map_Budapest_P2NumPOI.html"><strong>Reachable POIs</strong><br><small>amenities within reach (8 MB)</small></a>
-      <a class="card" href="accessibility_map_Budapest_ReachablePopulation.html"><strong>Reachable population</strong><br><small>people within reach (4 MB)</small></a>
     </div>
 
     <footer>
