@@ -64,15 +64,18 @@ def main(argv: list[str]) -> int:
     orig_xy = np.array([[r[0], r[1]] for r in original]) * scale
     dist, idx = tree.query(orig_xy, k=1)
 
-    matched = dist <= 30.0
+    # The two hex tilings are shifted by a constant ~221 m (one apothem),
+    # so pairs are adjacent overlapping cells, not identical ones - the
+    # correlation is slightly attenuated by that offset.
+    matched = dist <= 230.0
     o = np.array([r[2] for r in original])[matched]
     n = np.array([new_rows[i][2] for i in idx[matched]])
     print(f"matched {matched.sum()}/{len(original)} original hexes "
           f"(median centroid offset {np.median(dist[matched]):.1f} m)")
     print(f"original counts: mean {o.mean():.1f}, max {o.max()}")
     print(f"recomputed:      mean {n.mean():.1f}, max {n.max()}")
-    print(f"Pearson r  = {pearsonr(o, n)[0]:.3f}")
-    print(f"Spearman ρ = {spearmanr(o, n)[0]:.3f}")
+    print(f"Pearson r    = {pearsonr(o, n)[0]:.3f}")
+    print(f"Spearman rho = {spearmanr(o, n)[0]:.3f}")
     return 0
 
 

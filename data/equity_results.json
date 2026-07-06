@@ -1,6 +1,9 @@
 {
   "hour": 8,
-  "accessibility_definition": "1 / max(average_travel_time_min, 1.0)",
+  "views": {
+    "P2P": "1 / max(average_travel_time_min, 1.0)",
+    "AMENITIES": "essential services reachable by transit within 60 min (scripts/reachable_pois.py)"
+  },
   "results": {
     "Torino_P2P": {
       "city": "Torino",
@@ -38,41 +41,41 @@
       "mean_accessibility_per_capita": 0.0121,
       "bottom_half_accessibility_share": 0.4422
     },
-    "Torino_P2POI": {
+    "Torino_AMENITIES": {
       "city": "Torino",
-      "map_type": "P2POI",
-      "n_cells": 1908,
-      "gini": 0.3441,
-      "theil": 0.2143,
-      "atkinson_e05": 0.0965,
-      "palma_ratio": 1.4362,
-      "population": 1454681.0,
-      "mean_accessibility_per_capita": 0.0352,
-      "bottom_half_accessibility_share": 0.2726
+      "map_type": "AMENITIES",
+      "n_cells": 2184,
+      "gini": 0.2588,
+      "theil": 0.1532,
+      "atkinson_e05": 0.0973,
+      "palma_ratio": 0.7814,
+      "population": 1526156.0,
+      "mean_accessibility_per_capita": 956.4151,
+      "bottom_half_accessibility_share": 0.3094
     },
-    "Milano_P2POI": {
+    "Milano_AMENITIES": {
       "city": "Milano",
-      "map_type": "P2POI",
-      "n_cells": 4764,
-      "gini": 0.4138,
-      "theil": 0.2754,
-      "atkinson_e05": 0.1379,
-      "palma_ratio": 1.7751,
-      "population": 3333135.0,
-      "mean_accessibility_per_capita": 0.417,
-      "bottom_half_accessibility_share": 0.1969
+      "map_type": "AMENITIES",
+      "n_cells": 2804,
+      "gini": 0.2873,
+      "theil": 0.2,
+      "atkinson_e05": 0.1335,
+      "palma_ratio": 0.9005,
+      "population": 2544137.0,
+      "mean_accessibility_per_capita": 1403.2801,
+      "bottom_half_accessibility_share": 0.2895
     },
-    "Paris_P2POI": {
+    "Paris_AMENITIES": {
       "city": "Paris",
-      "map_type": "P2POI",
-      "n_cells": 12804,
-      "gini": 0.2337,
-      "theil": 0.0879,
-      "atkinson_e05": 0.0424,
-      "palma_ratio": 0.7713,
-      "population": 10795836.0,
-      "mean_accessibility_per_capita": 0.0233,
-      "bottom_half_accessibility_share": 0.3353
+      "map_type": "AMENITIES",
+      "n_cells": 13134,
+      "gini": 0.234,
+      "theil": 0.1184,
+      "atkinson_e05": 0.0742,
+      "palma_ratio": 0.6651,
+      "population": 10849498.0,
+      "mean_accessibility_per_capita": 10236.162,
+      "bottom_half_accessibility_share": 0.3316
     }
   }
 }

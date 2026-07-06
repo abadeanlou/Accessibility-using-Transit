@@ -55,31 +55,44 @@ pytest tests -v
 
 ## Equity results (published on the live demo)
 
-Computed from the per-hex data recovered out of the map exports
-(`scripts/harvest_maps.py`), 8:00 layer, accessibility = 1 / average
-travel time (floored at one minute), population-weighted throughout.
-Lorenz curves and caveats live on the
-[demo page](https://abadeanlou.com/accessibility/#equity); full numbers
-in `data/equity_results.json`.
+Two population-weighted views, Lorenz curves and caveats on the
+[demo page](https://abadeanlou.com/accessibility/#equity), full numbers
+in `data/equity_results.json`:
+
+- **Whole-city reach (P2P)**: per-hex average travel time recovered out
+  of the map exports (`scripts/harvest_maps.py`, 8:00 layer),
+  accessibility = 1 / travel time.
+- **Essential services**: how many schools, universities, healthcare
+  places, supermarkets and markets (OpenStreetMap) each hex reaches by
+  transit within 60 minutes at 8:00 - a cumulative-opportunities
+  measure computed by `scripts/reachable_pois.py` from current GTFS
+  feeds (busiest weekday, 15-min walk to stops, 5-min transfers,
+  straight-line walking x1.3 detour). A self-contained successor to the
+  original MongoDB + OSRM pipeline: the recomputed Milano surface
+  matches the original research export with Spearman rho = 0.81
+  (`scripts/validate_milano_counts.py`).
 
 | City | View | Gini | Theil | Atkinson (e=0.5) | Palma |
 |---|---|---|---|---|---|
 | Torino | P2P - whole-city reach | 0.087 | 0.012 | 0.006 | 0.36 |
 | Milano | P2P - whole-city reach | 0.107 | 0.018 | 0.009 | 0.40 |
 | Paris | P2P - whole-city reach | 0.081 | 0.010 | 0.005 | 0.36 |
-| Torino | P2POI - reach to amenities | 0.344 | 0.214 | 0.097 | 1.44 |
-| Milano | P2POI - reach to amenities | 0.414 | 0.275 | 0.138 | 1.78 |
-| Paris | P2POI - reach to amenities | 0.234 | 0.088 | 0.042 | 0.77 |
+| Torino | Essential services in 60 min | 0.259 | 0.153 | 0.097 | 0.78 |
+| Milano | Essential services in 60 min | 0.287 | 0.200 | 0.134 | 0.90 |
+| Paris | Essential services in 60 min | 0.234 | 0.118 | 0.074 | 0.67 |
 
-The headline finding: average reach to the *whole city* is spread almost
-evenly everywhere (Gini < 0.11), but access to *amenities* is far less
-equal - and Milano is the most unequal of the three (the best-served 10%
-of residents hold 1.78x the accessibility of the worst-served 40%).
+The headline finding: average reach to the *whole city* is spread
+almost evenly everywhere (Gini < 0.11, expected - the average is
+dominated by geography every resident shares), but access to essential
+services is far less equal, and the ranking is consistent on every
+index: Milano is the most unequal of the three, Paris the most equal.
 
-Regenerate after new map exports:
+Regenerate:
 
 ```bash
-python scripts/harvest_maps.py Maps/accessibility_map_<City>_<Type>.html data/hexes_<City>_<Type>.csv
+python scripts/harvest_maps.py Maps/accessibility_map_<City>_P2P.html data/hexes_<City>_P2P.csv
+python scripts/fetch_pois_osm.py data/hexes_<City>_P2P.csv data/pois_<City>.csv
+python scripts/reachable_pois.py <gtfs.zip> data/hexes_<City>_P2P.csv data/pois_<City>.csv data/numpoi_<City>.csv
 python scripts/build_equity.py   # rewrites the equity section of Maps/index.html
 ```
 

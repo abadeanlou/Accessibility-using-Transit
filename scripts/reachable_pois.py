@@ -26,7 +26,7 @@ import csv
 import io
 import sys
 import zipfile
-from datetime import date, datetime, timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import numpy as np
@@ -60,9 +60,18 @@ def _seconds(series):
     return parts[0] * 3600 + parts[1] * 60 + parts[2]
 
 
+_MAX_CALENDAR_SPAN_DAYS = 180
+
+
 def busiest_weekday(z: zipfile.ZipFile) -> str:
-    """Pick the Mon-Fri date with the most active trips over the feed's
-    next two weeks (mirrors the original 'busiest network day' default)."""
+    """Pick the Mon-Fri date with the most active trips over the whole
+    feed horizon (mirrors the original 'busiest network day' default).
+
+    Scanning only upcoming dates would silently pick a skeleton service
+    on partially-loaded feeds - e.g. Milano's July calendar_dates
+    activates the five metro lines only, while June carries the full
+    surface network.
+    """
     import pandas as pd
 
     trips = _read_csv(z, "trips.txt", {"service_id", "trip_id"})
@@ -85,15 +94,25 @@ def busiest_weekday(z: zipfile.ZipFile) -> str:
     if cal is None and cdates is None:
         raise ValueError("feed has neither calendar.txt nor calendar_dates.txt data")
 
-    start = date.today()
+    candidates = set()
+    if cdates is not None:
+        candidates |= set(cdates["date"])
+    if cal is not None:
+        lo = datetime.strptime(cal["start_date"].min(), "%Y%m%d").date()
+        hi = datetime.strptime(cal["end_date"].max(), "%Y%m%d").date()
+        hi = min(hi, lo + timedelta(days=_MAX_CALENDAR_SPAN_DAYS))
+        d = lo
+        while d <= hi:
+            candidates.add(d.strftime("%Y%m%d"))
+            d += timedelta(days=1)
+
     weekday_cols = ["monday", "tuesday", "wednesday", "thursday",
                     "friday", "saturday", "sunday"]
     best_date, best_trips = None, -1
-    for offset in range(14):
-        d = start + timedelta(days=offset)
+    for ds in sorted(candidates):
+        d = datetime.strptime(ds, "%Y%m%d").date()
         if d.weekday() >= 5:
             continue
-        ds = d.strftime("%Y%m%d")
         active = set()
         if cal is not None:
             col = weekday_cols[d.weekday()]
@@ -108,7 +127,7 @@ def busiest_weekday(z: zipfile.ZipFile) -> str:
         if n > best_trips:
             best_date, best_trips = ds, n
     if not best_trips or best_trips <= 0:
-        raise ValueError("no weekday with active service found in the next 14 days")
+        raise ValueError("no weekday with active service found in the feed")
     print(f"service day {best_date}: {best_trips} trips")
     return best_date
 
