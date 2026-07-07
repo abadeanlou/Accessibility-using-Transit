@@ -41,6 +41,42 @@
       "mean_accessibility_per_capita": 0.0121,
       "bottom_half_accessibility_share": 0.4422
     },
+    "Torino_P2POI": {
+      "city": "Torino",
+      "map_type": "P2POI",
+      "n_cells": 1908,
+      "gini": 0.3441,
+      "theil": 0.2143,
+      "atkinson_e05": 0.0965,
+      "palma_ratio": 1.4362,
+      "population": 1454681.0,
+      "mean_accessibility_per_capita": 0.0352,
+      "bottom_half_accessibility_share": 0.2726
+    },
+    "Milano_P2POI": {
+      "city": "Milano",
+      "map_type": "P2POI",
+      "n_cells": 4764,
+      "gini": 0.4138,
+      "theil": 0.2754,
+      "atkinson_e05": 0.1379,
+      "palma_ratio": 1.7751,
+      "population": 3333135.0,
+      "mean_accessibility_per_capita": 0.417,
+      "bottom_half_accessibility_share": 0.1969
+    },
+    "Paris_P2POI": {
+      "city": "Paris",
+      "map_type": "P2POI",
+      "n_cells": 12804,
+      "gini": 0.2337,
+      "theil": 0.0879,
+      "atkinson_e05": 0.0424,
+      "palma_ratio": 0.7713,
+      "population": 10795836.0,
+      "mean_accessibility_per_capita": 0.0233,
+      "bottom_half_accessibility_share": 0.3353
+    },
     "Torino_AMENITIES": {
       "city": "Torino",
       "map_type": "AMENITIES",

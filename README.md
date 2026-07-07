@@ -77,6 +77,9 @@ in `data/equity_results.json`:
 | Torino | P2P - whole-city reach | 0.087 | 0.012 | 0.006 | 0.36 |
 | Milano | P2P - whole-city reach | 0.107 | 0.018 | 0.009 | 0.40 |
 | Paris | P2P - whole-city reach | 0.081 | 0.010 | 0.005 | 0.36 |
+| Torino | P2POI - time to amenities | 0.344 | 0.214 | 0.097 | 1.44 |
+| Milano | P2POI - time to amenities | 0.414 | 0.275 | 0.138 | 1.78 |
+| Paris | P2POI - time to amenities | 0.234 | 0.088 | 0.042 | 0.77 |
 | Torino | Essential services in 60 min | 0.259 | 0.153 | 0.097 | 0.78 |
 | Milano | Essential services in 60 min | 0.287 | 0.200 | 0.134 | 0.90 |
 | Paris | Essential services in 60 min | 0.234 | 0.118 | 0.074 | 0.67 |

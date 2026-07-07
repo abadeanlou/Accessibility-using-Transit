@@ -35,7 +35,8 @@ HOUR = 8
 # inverting that raw would hand one cell a near-infinite accessibility.
 MIN_TRAVEL_TIME_MIN = 1.0
 CITIES = ["Torino", "Milano", "Paris"]
-VIEWS = {"P2P": "whole-city reach", "AMENITIES": "reachable essential services"}
+VIEWS = {"P2P": "whole-city reach", "P2POI": "time to amenities",
+         "AMENITIES": "reachable essential services"}
 CITY_COLORS = {"Torino": "#8a6d3b", "Milano": "#4a7c59", "Paris": "#5b6d9a"}
 _MAX_CURVE_POINTS = 250
 
@@ -70,8 +71,8 @@ def load_numpoi(csv_path: Path) -> tuple[list[float], list[float]]:
 
 
 def _load_view(data_dir: Path, city: str, view: str):
-    if view == "P2P":
-        return load_hexes(data_dir / f"hexes_{city}_P2P.csv")
+    if view in ("P2P", "P2POI"):
+        return load_hexes(data_dir / f"hexes_{city}_{view}.csv")
     return load_numpoi(data_dir / f"numpoi_{city}.csv")
 
 
@@ -149,6 +150,7 @@ def _fmt_palma(v: float) -> str:
 
 
 _VIEW_LABELS = {"P2P": "P2P — whole-city reach",
+                "P2POI": "P2POI — time to amenities",
                 "AMENITIES": "Essential services within 60 min"}
 
 
@@ -181,8 +183,9 @@ def render_section(results: dict) -> str:
     population-weighted views, using the inequality-index family of my
     <a href="https://arxiv.org/abs/2206.09037">hEART 2022</a> and
     <a href="https://arxiv.org/abs/2210.00128">TRB 2023</a> papers.
-    <b>Whole-city reach</b>: each hex's average travel time t to the entire
-    city (recovered from the maps above, 8:00 layer) as a velocity-like
+    <b>Whole-city reach</b> and <b>time to amenities</b>: each hex's average
+    travel time t (to the entire city, or to the points of interest —
+    recovered from the maps above, 8:00 layer) as a velocity-like
     accessibility 1/t. <b>Essential services</b>: how many schools,
     universities, hospitals, clinics, doctors, pharmacies, supermarkets and
     markets (OpenStreetMap) each hex reaches by transit within 60 minutes
@@ -201,7 +204,9 @@ def render_section(results: dict) -> str:
     dominated by geography every resident shares, and the source exports
     cap travel times at 120 minutes. Caveats: population weights come from
     the original research exports (one assumed service day per city);
-    unreachable cells were dropped at export time; the essential-services
+    unreachable cells were dropped at export time; travel times are floored
+    at one minute before inversion (a few cells contain the amenity itself
+    and export ~0 minutes); the essential-services
     view walks straight-line distances scaled by 1.3 rather than routed
     streets, and uses 2026 timetables while the maps above show the
     original research runs.</p>

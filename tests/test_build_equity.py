@@ -22,6 +22,9 @@ def _write_csvs(data_dir: Path) -> None:
         (data_dir / f"hexes_{city}_P2P.csv").write_text(
             "\n".join(rows) + "\n", encoding="utf-8"
         )
+        (data_dir / f"hexes_{city}_P2POI.csv").write_text(
+            "\n".join(rows) + "\n", encoding="utf-8"
+        )
         counts = [
             "lat,lon,population,reachable_pois",
             "45.0,7.0,100,120",
@@ -37,7 +40,7 @@ def test_compute_all_and_render(tmp_path):
     _write_csvs(tmp_path / "data")
     results = build_equity.compute_all(tmp_path / "data")
 
-    assert len(results) == 6
+    assert len(results) == 9
     r = results["Torino_P2P"]
     assert r["n_cells"] == 4  # hour-3 row excluded
     assert 0 < r["gini"] < 1
@@ -47,12 +50,13 @@ def test_compute_all_and_render(tmp_path):
     a = results["Torino_AMENITIES"]
     assert a["n_cells"] == 3
     assert 0 < a["gini"] < 1
+    assert results["Torino_P2POI"]["n_cells"] == 4
 
     section = build_equity.render_section(results)
     assert '<h2 id="equity">' in section
-    assert section.count("<tr>") == 7  # header + 6 rows
-    assert section.count("<svg") == 2
-    assert section.count("<path") == 6  # 3 city curves per chart
+    assert section.count("<tr>") == 10  # header + 9 rows
+    assert section.count("<svg") == 3
+    assert section.count("<path") == 9  # 3 city curves per chart
 
 
 def test_update_index_replaces_only_marker_block(tmp_path):
