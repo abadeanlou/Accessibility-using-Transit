@@ -8,7 +8,7 @@ import pytest
 
 pytest.importorskip("scipy")
 
-from build_numpoi_maps import grid_geometry  # noqa: E402
+from build_hex_maps import grid_geometry  # noqa: E402
 
 
 def _synthetic_grid(base_deg: float, r_m: float, lat0=45.0, lon0=7.6):

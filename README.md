@@ -93,8 +93,8 @@ Regenerate:
 python scripts/harvest_maps.py Maps/accessibility_map_<City>_P2P.html data/hexes_<City>_P2P.csv
 python scripts/fetch_pois_osm.py data/hexes_<City>_P2P.csv data/pois_<City>.csv
 python scripts/reachable_pois.py <gtfs.zip> data/hexes_<City>_P2P.csv data/pois_<City>.csv data/numpoi_<City>.csv
-python scripts/build_equity.py       # rewrites the equity section of Maps/index.html
-python scripts/build_numpoi_maps.py  # compact interactive maps of the counts
+python scripts/build_equity.py    # rewrites the equity section of Maps/index.html
+python scripts/build_hex_maps.py  # compact interactive maps (P2P, P2POI, essential services)
 ```
 
 ## Requirements (full pipeline)
