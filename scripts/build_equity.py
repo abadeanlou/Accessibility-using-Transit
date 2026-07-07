@@ -188,7 +188,8 @@ def render_section(results: dict) -> str:
     markets (OpenStreetMap) each hex reaches by transit within 60 minutes
     at 8:00 — a cumulative-opportunities measure recomputed from current
     GTFS timetables with the same limits as the original research (15-min
-    walk to stops, 5-min transfers). 0 means perfectly equal on every
+    walk to stops, 5-min transfers), drawn hex by hex in the
+    Essential-services maps above. 0 means perfectly equal on every
     index; the Palma ratio is the accessibility share of the best-served
     10% of people over the worst-served 40% (0.25 at perfect equality).</p>
     {table}

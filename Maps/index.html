@@ -66,26 +66,31 @@
     <div class="legend">
       <b>Map types</b> —
       <b>P2P</b>: average travel time from each cell to the whole city ·
-      <b>P2POI</b>: travel time to points of interest.
-      Maps are self-contained exports of several MB — give them a few seconds.
+      <b>P2POI</b>: travel time to points of interest ·
+      <b>Essential services</b>: how many services each cell reaches in 60 minutes,
+      recomputed 2026 from current GTFS (the layer behind the equity numbers below).
+      The P2P/P2POI maps are original research exports of several MB — give them a few seconds.
     </div>
 
     <h2>Torino</h2>
     <div class="maps">
       <a class="card" href="accessibility_map_Torino_P2P.html"><strong>P2P</strong><br><small>city-wide travel time (9 MB)</small></a>
       <a class="card" href="accessibility_map_Torino_P2POI.html"><strong>P2POI</strong><br><small>time to amenities (6 MB)</small></a>
+      <a class="card" href="essential_services_Torino.html"><strong>Essential services</strong><br><small>reachable in 60 min · 2026 (fast)</small></a>
     </div>
 
     <h2>Milano</h2>
     <div class="maps">
       <a class="card" href="accessibility_map_Milano_P2P.html"><strong>P2P</strong><br><small>city-wide travel time (12 MB)</small></a>
       <a class="card" href="accessibility_map_Milano_P2POI.html"><strong>P2POI</strong><br><small>time to amenities (16 MB)</small></a>
+      <a class="card" href="essential_services_Milano.html"><strong>Essential services</strong><br><small>reachable in 60 min · 2026 (fast)</small></a>
     </div>
 
     <h2>Paris</h2>
     <div class="maps">
       <a class="card" href="accessibility_map_Paris_P2P.html"><strong>P2P</strong><br><small>city-wide travel time (55 MB — heavy)</small></a>
       <a class="card" href="accessibility_map_Paris_P2POI.html"><strong>P2POI</strong><br><small>time to amenities (34 MB)</small></a>
+      <a class="card" href="essential_services_Paris.html"><strong>Essential services</strong><br><small>reachable in 60 min · 2026 (fast)</small></a>
     </div>
 
     <!-- EQUITY:START -->
@@ -101,7 +106,8 @@
     markets (OpenStreetMap) each hex reaches by transit within 60 minutes
     at 8:00 — a cumulative-opportunities measure recomputed from current
     GTFS timetables with the same limits as the original research (15-min
-    walk to stops, 5-min transfers). 0 means perfectly equal on every
+    walk to stops, 5-min transfers), drawn hex by hex in the
+    Essential-services maps above. 0 means perfectly equal on every
     index; the Palma ratio is the accessibility share of the best-served
     10% of people over the worst-served 40% (0.25 at perfect equality).</p>
     <div style="overflow-x:auto;"><table class="equity-table"><thead><tr><th>City</th><th>View</th><th>Gini</th><th>Theil</th><th>Atkinson (ε=0.5)</th><th>Palma</th><th>Bottom-50% share</th></tr></thead><tbody><tr><td>Torino</td><td>P2P — whole-city reach</td><td>0.087</td><td>0.012</td><td>0.006</td><td>0.36</td><td>43.7%</td></tr><tr><td>Milano</td><td>P2P — whole-city reach</td><td>0.107</td><td>0.018</td><td>0.009</td><td>0.40</td><td>42.4%</td></tr><tr><td>Paris</td><td>P2P — whole-city reach</td><td>0.081</td><td>0.010</td><td>0.005</td><td>0.36</td><td>44.2%</td></tr><tr><td>Torino</td><td>Essential services within 60 min</td><td>0.259</td><td>0.153</td><td>0.097</td><td>0.78</td><td>30.9%</td></tr><tr><td>Milano</td><td>Essential services within 60 min</td><td>0.287</td><td>0.200</td><td>0.134</td><td>0.90</td><td>28.9%</td></tr><tr><td>Paris</td><td>Essential services within 60 min</td><td>0.234</td><td>0.118</td><td>0.074</td><td>0.67</td><td>33.2%</td></tr></tbody></table></div>
