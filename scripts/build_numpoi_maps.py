@@ -69,9 +69,11 @@ def grid_geometry(rows: list[list]) -> tuple[float, float]:
     dist, idx = tree.query(xy[: min(500, len(xy))], k=2)
     spacing = float(np.median(dist[:, 1]))
     vecs = xy[idx[:, 1]] - xy[: len(idx)]
-    # neighbour bearings repeat every 60 deg; vertices sit 30 deg off them
-    ang = np.degrees(np.arctan2(vecs[:, 0], vecs[:, 1])) % 60.0
-    base = float(np.median(ang)) + 30.0
+    # Compass bearing (from north toward east) to match the JS vertex
+    # formula (lat += R cos a, lon += R sin a). Neighbour bearings repeat
+    # every 60 deg; vertices sit 30 deg off them.
+    ang = np.degrees(np.arctan2(vecs[:, 1], vecs[:, 0])) % 60.0
+    base = (float(np.median(ang)) + 30.0) % 60.0
     return spacing / np.sqrt(3.0), base
 
 
